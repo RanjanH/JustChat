@@ -1,0 +1,41 @@
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
+
+import sys
+
+class serverWin(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        '''Server backend variables here'''
+
+        self.setWindowTitle("Just Chat Server!")
+        self.setFixedSize(QSize(800,450))
+
+        self.mainFrame = QWidget(self)
+        self.mainFrame.setGeometry(0,0,800,450)
+        self.mainGrid = QGridLayout()
+        self.mainFrame.setLayout(self.mainGrid)
+
+        self.clientTable = QTableWidget()
+        self.clientTable.setColumnCount(3)
+        self.table_row = 0
+        self.clientTable.setRowCount(self.table_row)
+        self.clientTable.setHorizontalHeaderLabels(['Name','Host','Port'])
+        
+        self.textEdit = QTextEdit()
+        self.start = QPushButton('Start Server')
+        self.exit = QPushButton('Exit')
+
+        self.mainGrid.addWidget(self.clientTable,0,0,4,3,Qt.AlignmentFlag(0))
+        self.mainGrid.addWidget(self.textEdit,0,3,4,4,Qt.AlignmentFlag(0))
+        self.mainGrid.addWidget(self.start,4,3)
+        self.mainGrid.addWidget(self.exit,4,6)
+
+app = QApplication(sys.argv)
+
+window = serverWin()
+window.show()
+
+app.exec()
