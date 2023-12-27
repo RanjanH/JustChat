@@ -7,21 +7,13 @@ import dotenv
 import os
 
 from time import strftime,localtime,sleep
-from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
-from Crypto.Cipher import AES, PKCS1_OAEP
 
 dotenv.load_dotenv()
 
 marshall = pickle.dumps
 unmarshall = pickle.loads
 
-key = RSA.generate(2048)
-
-HEADER_LENGTH = 10
-
 IP = os.getenv("IP")
-print(IP)
 PORT = int(os.getenv("PORT"))
 
 def timed():
@@ -34,15 +26,26 @@ class ServerProtocol:
     def __init__(self):
         pass
 
-    def send(channel,*msg):
+    def send(channel,**msg):
         buffer = marshall(msg)
         value = socket.htonl(len(buffer))
         size = struct.pack("L",value)
-        channel.send(size)
+        channel.send(size + buffer)
 
+    def recv(sock):
+        size = struct.calcsize("L")
+        size = sock.recv(size)
+        try:
+            size = socket.ntohl(struct.unpack("L",size)[0])
+        except struct.error as e:
+            return e
         
+        buffer = ''
 
+        while len(buffer) < size:
+            buffer = sock.recv(size - len(buffer))
 
+        buffer = unmarshall(buffer)
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
