@@ -15,8 +15,6 @@ dotenv.load_dotenv()
 marshall = pickle.dumps
 unmarshall = pickle.loads
 
-
-
 class ServerProtocol:
     def __init__(self):
         self.IP = os.getenv("IP")
@@ -54,20 +52,15 @@ class ServerProtocol:
         try:
             size = sock.recv(size)
             size = socket.ntohl(struct.unpack("L",size)[0])
-
         except struct.error as e:
             return ''
-        
         except :
             return False
         
         buffer = ''
-
         while len(buffer) < size:
             buffer = sock.recv(size - len(buffer))
-
         buffer = unmarshall(buffer)
-
         return buffer
     
     def startServer(self):
