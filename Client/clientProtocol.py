@@ -21,6 +21,7 @@ class ClientProtocol:
         self.PORT= int(os.getenv("PORT"))
         self.client_socket = ''
         self.window = ''
+        self.isConnected = False
 
     def timed(self):
         return strftime("%H:%M:%S",localtime())
@@ -51,19 +52,14 @@ class ClientProtocol:
         return buffer
     
     def connect(self):
-        print("Connecting")
-
-        self.window.setWindowTitle(f'{self.uName} Just Chat!')
         self.window.chatView_update(color = 'blue', text = 'Connecting....')
-        if self.uName == '':
-            self.window.name()
-        print("HUH!!")
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.client_socket.connect((self.IP, self.PORT))
         except:
             self.window.chatView_update(color = "red", text = "Failed to connect to server")
-
+            return
+        self.isConnected = True
         self.client_socket.setblocking(False)
 
         self.send(self.client_socket,Name = self.uName)
