@@ -1,27 +1,27 @@
 import socket
-import sys
 import errno
-import dotenv
-import os
+import sys
 import pickle
 import struct
+import dotenv
+import os
 
-from time import strftime,localtime
+from random import randint
+from time import strftime,localtime,sleep
 
 dotenv.load_dotenv()
 
 marshall = pickle.dumps
 unmarshall = pickle.loads
 
-
 class ClientProtocol:
     def __init__(self):
-        self.uName = ''
-        self.IP = os.getenv("IP")
-        self.PORT= int(os.getenv("PORT"))
+        self.connected = False
+        self.IP = os.getenv('IP')
+        self.PORT = int(os.getenv('PORT'))
+        self.uName = f"User{randint(1000,9999)}"
         self.client_socket = ''
         self.window = ''
-        self.isConnected = False
 
     def timed(self):
         return strftime("%H:%M:%S",localtime())
@@ -29,73 +29,66 @@ class ClientProtocol:
     def formatResult(self,color = 'black',text = ''):
         return f"<font color = '{color}'>[{self.timed()}] * {text}</font>"
 
-    def send(self,channel,**msg):
-        buffer = marshall(msg)
+    def send(self,channel,**kw):
+        buffer = marshall(kw)
         value = socket.htonl(len(buffer))
         size = struct.pack("L",value)
         channel.send(size + buffer)
 
     def recv(self,sock):
         size = struct.calcsize("L")
+        size = sock.recv(size)
         try:
-            size = sock.recv(size)
             size = socket.ntohl(struct.unpack("L",size)[0])
         except struct.error as e:
             return ''
-        except :
-            return False
+        '''except :
+            return False'''
         
         buffer = ''
         while len(buffer) < size:
             buffer = sock.recv(size - len(buffer))
         buffer = unmarshall(buffer)
         return buffer
-    
+
     def connect(self):
-        self.window.chatView_update(color = 'blue', text = 'Connecting....')
+        sleep(1)
+        self.window.emitSignal(color = 'blue', text = 'Connecting....',newOnline = False)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.client_socket.connect((self.IP, self.PORT))
         except:
-            self.window.chatView_update(color = "red", text = "Failed to connect to server")
+            self.window.emitSignal(color = "red", text = "Failed to connect to server",newOnline = False)
             return
-        self.isConnected = True
+        
+        self.connected = True
         self.client_socket.setblocking(False)
 
         self.send(self.client_socket,Name = self.uName)
 
-        self.window.chatView_update(color = 'green',text = 'Connected to Server!!')
+        self.window.emitSignal(color = 'green',text = 'Connected to Server!!',newOnline = False)
 
-'''while True:
-    message = input(f'{my_username} > ')
-    if message:
-        message = message.encode('utf-8')
-        message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
-        client_socket.send(message_header + message)
-        send(client_socket,Name = my_username,msg = message)
+        self.handler()
 
-    try:
+    def sendMsg(self,msgs):
+        self.send(self.client_socket,Name = self.uName,msg = msgs)
+
+    def handler(self):
         while True:
-            username_header = client_socket.recv(HEADER_LENGTH)
-            if not len(username_header):
-                print('Connection closed by the server')
+            try:
+                while True:
+                    msg = self.recv(self.client_socket)
+                    if not len(msg):
+                        print('Connection closed by the server')
+                        sys.exit()
+                    print(f'{msg["Name"]} > {msg["msg"]}')
+
+            except IOError as e:
+                if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+                    print('Reading error: {}'.format(str(e)))
+                    sys.exit()
+                continue
+
+            except Exception as e:
+                print('Reading error: '.format(str(e)))
                 sys.exit()
-
-            username_length = int(username_header.decode('utf-8').strip())
-            username = client_socket.recv(username_length).decode('utf-8')
-            message_header = client_socket.recv(HEADER_LENGTH)
-            message_length = int(message_header.decode('utf-8').strip())
-            message = client_socket.recv(message_length).decode('utf-8')
-
-            print(f'{username} > {message}')
-
-    except IOError as e:
-        if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
-            print('Reading error: {}'.format(str(e)))
-            sys.exit()
-
-        continue
-
-    except Exception as e:
-        print('Reading error: '.format(str(e)))
-        sys.exit()'''

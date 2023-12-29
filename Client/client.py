@@ -1,36 +1,32 @@
 import sys
-import os
-import socket
-import errno
 import psutil
-import time
-import clientProtocol
+import os
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import *
+
+from clientProtocol import ClientProtocol
 from threading import Thread
 
-prot = clientProtocol.ClientProtocol()
+
+prot = ClientProtocol()
 
 def killProcess(pid, including_parent=True):
     parent = psutil.Process(pid)
     if including_parent:
         parent.kill()
 
-class chatWin(QMainWindow):
+class nameWin(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        #To Get Name
-        self.getName = True
+        self.setWindowTitle("Choose Name")
 
-        self.setWindowTitle('Choose Name!')
-
-        self.setFixedSize(350,150)
         #cp = QDesktopWidget().availableGeometry().center()
         #print(cp)
+
+        self.setFixedSize(350,150)
 
         self.mainFrame1 = QWidget(self)
         self.mainFrame1.setFixedSize(350,150)
@@ -50,9 +46,28 @@ class chatWin(QMainWindow):
         self.start.setStyleSheet("font-size: 10pt")
         self.start.clicked.connect(self.setName)
 
-        #The Chat Window
+    def setName(self):
+        if self.name.text() != '':
+            prot.uName = self.name.text()
+        self.close()
 
-        self.mainFrame2 = QWidget()
+    def keyPressEvent(self, e: QKeyEvent | None):
+        if (e.key() == 16777220) or (e.key() == 16777221):
+            return self.setName()
+
+class chatWin(QMainWindow):
+
+    chatUpdate = pyqtSignal(str,str)
+    userUpdate = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+
+        self.move(589,269)
+        self.setFixedSize(740,480)
+
+        self.setWindowTitle(f"{prot.uName} Just Chat!")
+        self.mainFrame2 = QWidget(self)
         self.mainFrame2.setFixedSize(740,480)
         
         self.online = QTableWidget(self.mainFrame2)
@@ -72,39 +87,36 @@ class chatWin(QMainWindow):
         self.btn.setGeometry(650,449,90,30)
         self.btn.clicked.connect(self.sendMsg)
 
-    def chatView_update(self,color = 'black',text = ''):
-        self.chatView.append(prot.formatResult(color,text))
+        listen = Thread(target = prot.connect)
+        listen.start()
+
+        self.chatUpdate.connect(self.chatView_update)
 
     def keyPressEvent(self, e: QKeyEvent | None):
         if (e.key() == 16777220) or (e.key() == 16777221):
-            if self.getName:
-                return self.setName()
-            else:
-                self.sendMsg()
+            return self.sendMsg()
 
-    def setName(self):
-        if self.name.text() != '':
-            self.getName = False
-            prot.uName = self.name.text()
-            self.move(589,269)
-            self.setFixedSize(740,480)
-            self.mainFrame1.setParent(None)
-            self.mainFrame2.setParent(self)
-            self.setWindowTitle(f"{prot.uName} Just Chat!")
-            self.setCentralWidget(self.mainFrame2)
-            connect = Thread(target = prot.connect)
-            connect.start()
+    def emitSignal (self,color,text,newOnline):
+        if newOnline:
+            self.userUpdate.emit(text)
+        else:
+            self.chatUpdate.emit(color,text)
+
+    def chatView_update(self,color = 'black',text = ''):
+        self.chatView.append(prot.formatResult(color,text))
 
     def sendMsg(self):
-        if self.msg.text() != '' and prot.isConnected:
+        if self.msg.text() != '' and prot.connected:
             prot.send(prot.client_socket,Name = prot.uName,msg = self.msg.text())
             self.chatView_update(color = 'dark violet', text = f'ME :> {self.msg.text()}')
             self.msg.clear()
-        elif not prot.isConnected:
+        elif not prot.connected:
             self.chatView_update(color = 'red', text = 'You are not connected to a server!')
         else:
-            self.chatView_update(color = 'red', text = 'Please Type Something....')
+            pass
 
+    def received(self,msg):
+        text = f"{msg['Name']} :> "
 
 if __name__ == '__main__':
 
@@ -117,9 +129,12 @@ if __name__ == '__main__':
     suppress_qt_warnings()
 
     app = QApplication(sys.argv)
+    window = nameWin()
+    window.show()
+    app.exec()
     window = chatWin()
     prot.window = window
     window.show()
-    app.exec_()
+    app.exec()
     me = os.getpid()
     sys.exit(killProcess(me))
