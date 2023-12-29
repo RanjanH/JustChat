@@ -74,21 +74,22 @@ class ClientProtocol:
         self.send(self.client_socket,Name = self.uName,msg = msgs)
 
     def handler(self):
-        while True:
+        while self.connected:
             try:
                 while True:
                     msg = self.recv(self.client_socket)
                     if not len(msg):
-                        print('Connection closed by the server')
-                        sys.exit()
-                    print(f'{msg["Name"]} > {msg["msg"]}')
+                        self.window.emitSignal('red','Connection closed by the server',False)
+                        self.connected = False
+                        break
+                    self.window.received(f'{msg["Name"]} > {msg["msg"]}')
 
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
-                    print('Reading error: {}'.format(str(e)))
+                    print('Reading error1: {}'.format(str(e)))
                     sys.exit()
                 continue
 
             except Exception as e:
-                print('Reading error: '.format(str(e)))
+                print('Reading error2: {}'.format(str(e)))
                 sys.exit()

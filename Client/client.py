@@ -116,7 +116,7 @@ class chatWin(QMainWindow):
             pass
 
     def received(self,msg):
-        text = f"{msg['Name']} :> "
+        self.emitSignal('brown',msg,False)
 
 if __name__ == '__main__':
 
