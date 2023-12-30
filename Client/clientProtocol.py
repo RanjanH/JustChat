@@ -53,12 +53,12 @@ class ClientProtocol:
 
     def connect(self):
         sleep(0.5)
-        self.window.emitSignal(color = 'blue', text = 'Connecting....',newOnline = False)
+        self.window.emitSignal(color = 'blue', text = 'Connecting....',newOnline = False,index = 0)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.client_socket.connect((self.IP, self.PORT))
         except:
-            self.window.emitSignal(color = "red", text = "Failed to connect to server",newOnline = False)
+            self.window.emitSignal(color = "red", text = "Failed to connect to server",newOnline = False,index = 0)
             return
         
         self.connected = True
@@ -66,7 +66,7 @@ class ClientProtocol:
 
         self.send(self.client_socket,Name = self.uName)
 
-        self.window.emitSignal(color = 'green',text = 'Connected to Server!!',newOnline = False)
+        self.window.emitSignal(color = 'green',text = 'Connected to Server!!',newOnline = False,index = 0)
 
         self.handler()
 
@@ -79,7 +79,7 @@ class ClientProtocol:
                 while True:
                     msg = self.recv(self.client_socket)
                     if not len(msg):
-                        self.window.emitSignal('red','Connection closed by the server',False)
+                        self.window.emitSignal('red','Connection closed by the server',False,index = 0)
                         self.connected = False
                         break
                     self.window.received(msg)
@@ -87,6 +87,7 @@ class ClientProtocol:
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
                     print('Reading error1: {}'.format(str(e)))
+                    self.window.emitSignal('red','Connection closed by the server',False,index = 0)
                     sys.exit()
                 continue
 

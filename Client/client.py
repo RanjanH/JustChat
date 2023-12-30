@@ -37,10 +37,10 @@ class nameWin(QMainWindow):
         label.setStyleSheet("font-size: 10pt")
         self.name = QLineEdit(self.mainFrame1)
         self.name.setMaxLength(10)
-        self.name.move(97,60)
+        self.name.move(87,60)
         self.name.setStyleSheet("font-size: 10pt")
 
-        self.start = QPushButton("Start Server")
+        self.start = QPushButton("Start")
         self.start.setParent(self.mainFrame1)
         self.start.move(125,105)
         self.start.setStyleSheet("font-size: 10pt")
@@ -69,22 +69,24 @@ class chatWin(QMainWindow):
         self.setFixedSize(740,515)
         
         self.online = QTableWidget(self)
-        self.online.setGeometry(1,0,250,509)
-        self.online.setRowCount(0)
+        self.online.setGeometry(1,0,150,509)
+        self.online.setRowCount(1)
         self.online.setColumnCount(1)
         self.online.setHorizontalHeaderLabels(['Online Now'])
+        self.online.setItem(0,0,QTableWidgetItem(f"{prot.uName} (You)"))
 
         self.chatTabs = QTabWidget(self)
-        self.chatTabs.move(255,0)
-        self.chatTabs.setGeometry(255,0,489,474)
+        self.chatTabs.setGeometry(155,0,589,474)
         self.chatTabs.setTabsClosable(True)
         self.chatTabs.tabCloseRequested.connect(self.tabClose)
 
-        self.commonRoom = QTextEdit(self)
-        self.commonRoom.setReadOnly(True)
+        self.serverRoom = QTextEdit(self)
+        self.serverRoom.setReadOnly(True)
+
+        self.chatTabs.addTab(self.serverRoom,'Server Room')
 
         self.msg = QLineEdit(self)
-        self.msg.setGeometry(255,479,390,30)
+        self.msg.setGeometry(155,479,490,30)
         self.btn = QPushButton('Send')
         self.btn.setParent(self)
         self.btn.setGeometry(650,479,90,30)
@@ -104,11 +106,11 @@ class chatWin(QMainWindow):
         if (e.key() == 16777220) or (e.key() == 16777221):
             return self.sendMsg()
 
-    def emitSignal (self,color,text,newOnline):
+    def emitSignal (self,color,text,newOnline,index):
         if newOnline:
             self.userUpdate.emit(text)
         else:
-            self.chatUpdate.emit(color,text)
+            self.chatUpdate.emit(color,text,index)
 
     def Room_update(self,color = 'black',text = '',index = 0):
         self.chatTabs.widget(index).append(prot.formatResult(color,text))
@@ -125,7 +127,12 @@ class chatWin(QMainWindow):
 
     def received(self,msg):
         if msg['Name'] == 'Server':
-            self.emitSignal('brown',msg,False,0)
+            self.emitSignal('brown',f"Server :> {msg['msg']}",False,0)
+            return
+        for i in range(1,self.chatTabs.count()):
+            if self.chatTabs.tabText(i) == msg['Room']:
+                break
+        self.emitSignal('brown',msg,False,i)
 
 if __name__ == '__main__':
 

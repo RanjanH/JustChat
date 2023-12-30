@@ -21,6 +21,7 @@ class ServerProtocol:
         self.PORT = int(os.getenv("PORT"))
         self.server = ''
         self.clients = 0
+        self.rooms = {}
         self.STATE = True
         self.socket_list = []
         self.clientMap = {}
@@ -46,6 +47,9 @@ class ServerProtocol:
         value = socket.htonl(len(buffer))
         size = struct.pack("L",value)
         channel.send(size + buffer)
+
+    def sendMsg(self,channel,text):
+        self.send(channel,Name = 'Server',msg = text)
 
     def recv(self,sock):
         size = struct.calcsize("L")
@@ -104,6 +108,19 @@ class ServerProtocol:
                     self.window.updateTable(True,cName,address[0],address[1])
                     self.outputs.append(client)
 
+                    self.sendMsg(client,f'Welcome to The server {cName}!')
+                    if len(self.rooms) > 0:
+                        self.sendMsg(client,f'Following are the list of active rooms that you can join :-')
+                        for i in self.rooms.keys():
+                            self.sendMsg(client,f' --- {i}')
+                    else:
+                        self.sendMsg(client,"Currently there are no rooms why don't you be the first to create a room")
+
+                    self.sendMsg(client,"Following are some commands which you can use in the server room :-")
+                    self.sendMsg(client," --- /create <room name> :> Create a new room")
+                    self.sendMsg(client," --- /join <room name> :> Join a room")
+                    self.sendMsg(client," --- /leave <room name> :> Leave a room")
+
                 else:
                     message = self.recv(sock)
 
@@ -123,7 +140,6 @@ class ServerProtocol:
                         continue
 
                     self.window.textEdit_update(text = f"Received message from {message['Name']} : {message['msg']}")
-                    self.send(sock,Name = 'Server',msg = 'Hello')
 
             for sock in error:
                 if sock in self.socket_list: self.socket_list.remove(sock)
