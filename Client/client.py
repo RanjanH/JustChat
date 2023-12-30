@@ -63,34 +63,46 @@ class chatWin(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.move(589,269)
-        self.setFixedSize(740,480)
-
         self.setWindowTitle(f"{prot.uName} Just Chat!")
-        self.mainFrame2 = QWidget(self)
-        self.mainFrame2.setFixedSize(740,480)
+
+        self.move(589,269)
+        self.setFixedSize(740,515)
         
-        self.online = QTableWidget(self.mainFrame2)
-        self.online.setGeometry(1,0,250,479)
+        self.online = QTableWidget(self)
+        self.online.setGeometry(1,0,250,514)
         self.online.setRowCount(0)
         self.online.setColumnCount(1)
         self.online.setHorizontalHeaderLabels(['Online Now'])
 
-        self.chatView = QTextEdit(self.mainFrame2)
-        self.chatView.setReadOnly(True)
-        self.chatView.setGeometry(255,0,489,444)
+        self.chatTabs = QTabWidget(self)
+        self.chatTabs.move(255,0)
+        self.chatTabs.setGeometry(255,0,489,474)
+        self.chatTabs.setTabsClosable(True)
+        self.chatTabs.tabCloseRequested.connect(self.tabClose)
 
-        self.msg = QLineEdit(self.mainFrame2)
-        self.msg.setGeometry(255,449,390,30)
+        self.commonRoom = QTextEdit(self)
+        self.commonRoom.setReadOnly(True)
+
+        self.chatTabs.addTab(self.commonRoom,'World Room')
+        for i in range(10):
+            self.chatTabs.addTab(QWidget(),f'Tab{i}')
+
+        self.msg = QLineEdit(self)
+        self.msg.setGeometry(255,484,390,30)
         self.btn = QPushButton('Send')
-        self.btn.setParent(self.mainFrame2)
-        self.btn.setGeometry(650,449,90,30)
+        self.btn.setParent(self)
+        self.btn.setGeometry(650,484,90,30)
         self.btn.clicked.connect(self.sendMsg)
 
         listen = Thread(target = prot.connect)
         listen.start()
 
-        self.chatUpdate.connect(self.chatView_update)
+        self.chatUpdate.connect(self.commonRoom_update)
+
+    def tabClose(self,index):
+        if index == 0:
+            return
+        self.chatTabs.removeTab(index)
 
     def keyPressEvent(self, e: QKeyEvent | None):
         if (e.key() == 16777220) or (e.key() == 16777221):
@@ -102,16 +114,16 @@ class chatWin(QMainWindow):
         else:
             self.chatUpdate.emit(color,text)
 
-    def chatView_update(self,color = 'black',text = ''):
-        self.chatView.append(prot.formatResult(color,text))
+    def commonRoom_update(self,color = 'black',text = ''):
+        self.commonRoom.append(prot.formatResult(color,text))
 
     def sendMsg(self):
         if self.msg.text() != '' and prot.connected:
             prot.send(prot.client_socket,Name = prot.uName,msg = self.msg.text())
-            self.chatView_update(color = 'dark violet', text = f'ME :> {self.msg.text()}')
+            self.commonRoom_update(color = 'dark violet', text = f'ME :> {self.msg.text()}')
             self.msg.clear()
         elif not prot.connected:
-            self.chatView_update(color = 'red', text = 'You are not connected to a server!')
+            self.commonRoom_update(color = 'red', text = 'You are not connected to a server!')
         else:
             pass
 
