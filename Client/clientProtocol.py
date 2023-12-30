@@ -52,7 +52,7 @@ class ClientProtocol:
         return buffer
 
     def connect(self):
-        sleep(1)
+        sleep(0.5)
         self.window.emitSignal(color = 'blue', text = 'Connecting....',newOnline = False)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:

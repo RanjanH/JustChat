@@ -124,4 +124,9 @@ class ServerProtocol:
 
                     self.window.textEdit_update(text = f"Received message from {message['Name']} : {message['msg']}")
                     self.send(sock,Name = 'Server',msg = 'Hello')
+
+            for sock in error:
+                if sock in self.socket_list: self.socket_list.remove(sock)
+                if sock in self.clientMap: del self.clientMap[sock]
+
                         
