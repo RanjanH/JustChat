@@ -82,7 +82,7 @@ class ClientProtocol:
                         self.window.emitSignal('red','Connection closed by the server',False)
                         self.connected = False
                         break
-                    self.window.received(f'{msg["Name"]} > {msg["msg"]}')
+                    self.window.received(msg)
 
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:

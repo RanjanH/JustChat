@@ -57,7 +57,7 @@ class nameWin(QMainWindow):
 
 class chatWin(QMainWindow):
 
-    chatUpdate = pyqtSignal(str,str)
+    chatUpdate = pyqtSignal(str,str,int)
     userUpdate = pyqtSignal(str)
 
     def __init__(self):
@@ -69,7 +69,7 @@ class chatWin(QMainWindow):
         self.setFixedSize(740,515)
         
         self.online = QTableWidget(self)
-        self.online.setGeometry(1,0,250,514)
+        self.online.setGeometry(1,0,250,509)
         self.online.setRowCount(0)
         self.online.setColumnCount(1)
         self.online.setHorizontalHeaderLabels(['Online Now'])
@@ -83,21 +83,17 @@ class chatWin(QMainWindow):
         self.commonRoom = QTextEdit(self)
         self.commonRoom.setReadOnly(True)
 
-        self.chatTabs.addTab(self.commonRoom,'World Room')
-        for i in range(10):
-            self.chatTabs.addTab(QWidget(),f'Tab{i}')
-
         self.msg = QLineEdit(self)
-        self.msg.setGeometry(255,484,390,30)
+        self.msg.setGeometry(255,479,390,30)
         self.btn = QPushButton('Send')
         self.btn.setParent(self)
-        self.btn.setGeometry(650,484,90,30)
+        self.btn.setGeometry(650,479,90,30)
         self.btn.clicked.connect(self.sendMsg)
 
         listen = Thread(target = prot.connect)
         listen.start()
 
-        self.chatUpdate.connect(self.commonRoom_update)
+        self.chatUpdate.connect(self.Room_update)
 
     def tabClose(self,index):
         if index == 0:
@@ -114,21 +110,22 @@ class chatWin(QMainWindow):
         else:
             self.chatUpdate.emit(color,text)
 
-    def commonRoom_update(self,color = 'black',text = ''):
-        self.commonRoom.append(prot.formatResult(color,text))
+    def Room_update(self,color = 'black',text = '',index = 0):
+        self.chatTabs.widget(index).append(prot.formatResult(color,text))
 
     def sendMsg(self):
         if self.msg.text() != '' and prot.connected:
             prot.send(prot.client_socket,Name = prot.uName,msg = self.msg.text())
-            self.commonRoom_update(color = 'dark violet', text = f'ME :> {self.msg.text()}')
+            self.Room_update(color = 'dark violet', text = f'ME :> {self.msg.text()}',index = self.chatTabs.currentIndex())
             self.msg.clear()
         elif not prot.connected:
-            self.commonRoom_update(color = 'red', text = 'You are not connected to a server!')
+            self.Room_update(color = 'red', text = 'You are not connected to a server!')
         else:
             pass
 
     def received(self,msg):
-        self.emitSignal('brown',msg,False)
+        if msg['Name'] == 'Server':
+            self.emitSignal('brown',msg,False,0)
 
 if __name__ == '__main__':
 
