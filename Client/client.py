@@ -117,7 +117,9 @@ class chatWin(QMainWindow):
 
     def sendMsg(self):
         if self.msg.text() != '' and prot.connected:
-            prot.send(prot.client_socket,Name = prot.uName,msg = self.msg.text())
+            if self.chatTabs.currentIndex == 0:
+                to = 'Server'
+            prot.send(prot.client_socket,Name = prot.uName,msg = self.msg.text(),To = to)
             self.Room_update(color = 'dark violet', text = f'ME :> {self.msg.text()}',index = self.chatTabs.currentIndex())
             self.msg.clear()
         elif not prot.connected:

@@ -29,6 +29,7 @@ class ServerProtocol:
         self.server_key = ''
         self.server_pubKey = ''
         self.window = ''
+        self.commands = ['/create','/join','/leave']
 
     def timed(self):
         return strftime("%H:%M:%S",localtime())
@@ -66,6 +67,13 @@ class ServerProtocol:
             buffer = sock.recv(size - len(buffer))
         buffer = unmarshall(buffer)
         return buffer
+    
+    def createRoom(self,sock,rName):
+        if rName in self.rooms.keys():
+            self.sendMsg(sock,f"Room {rName} already exists. Why don't you try joining it?")
+            return
+        self.rooms[rName] = []
+        self.rooms[rName].append(self.getName(sock))
     
     def startServer(self):
         self.window.start.setEnabled(False)
@@ -139,7 +147,23 @@ class ServerProtocol:
 
                         continue
 
-                    self.window.textEdit_update(text = f"Received message from {message['Name']} : {message['msg']}")
+                    self.window.textEdit_update(text = f"Received message from {message['Name']} for {message['To']} : {message['msg']}")
+                    if message['To'] == 'Server':
+                        if (message['msg'].split())[0] not in self.commands:
+                            self.sendMsg(sock,'Not a valid command. Use lower case for command. The room name can be in any format.')
+                            continue
+                        cmd = (message['msg'].split())[0]
+                        rName = (message['msg'].split())[1]
+                        if cmd == '/create':
+                            self.createRoom(sock,rName)
+                        elif len(self.rooms) == 0 and (cmd == '/leave' or cmd == '/join'):
+                            self.sendMsg(sock,f'No such Room found for you to {rName}')
+                        else:
+                            if cmd == '/leave':
+                                try:
+                                    self.rooms[rName].remove(self.clientMap[sock]['Name'])
+                                except:
+                                    self.sendmsg(sock,f'You have not joined room {rName}')
 
             for sock in error:
                 if sock in self.socket_list: self.socket_list.remove(sock)
