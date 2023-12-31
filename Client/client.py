@@ -59,6 +59,7 @@ class chatWin(QMainWindow):
 
     chatUpdate = pyqtSignal(str,str,int)
     userUpdate = pyqtSignal(str)
+    newRoom = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -96,29 +97,42 @@ class chatWin(QMainWindow):
         listen.start()
 
         self.chatUpdate.connect(self.Room_update)
+        self.newRoom.connect(self.createRoom)
 
     def tabClose(self,index):
         if index == 0:
             return
         self.chatTabs.removeTab(index)
 
+    def createRoom(self,name):
+        tab = QTextEdit(self)
+        tab.setReadOnly(True)
+        self.chatTabs.addTab(tab,name)
+        idx = self.chatTabs.count() - 1
+        self.Room_update("green",f"Server :> Welcome to the room {name}",idx)
+
+
     def keyPressEvent(self, e: QKeyEvent | None):
         if (e.key() == 16777220) or (e.key() == 16777221):
             return self.sendMsg()
 
-    def emitSignal (self,color,text,newOnline,index):
-        if newOnline:
-            self.userUpdate.emit(text)
-        else:
+    def emitSignal (self,color = '',text = '',status = '',index = ''):
+        if status == 0:
             self.chatUpdate.emit(color,text,index)
+        elif status == 1:
+            self.newRoom.emit((text.split())[1])
+        else:
+            self.userUpdate.emit(text)
 
     def Room_update(self,color = 'black',text = '',index = 0):
         self.chatTabs.widget(index).append(prot.formatResult(color,text))
 
     def sendMsg(self):
         if self.msg.text() != '' and prot.connected:
-            if self.chatTabs.currentIndex == 0:
+            if self.chatTabs.currentIndex() == 0:
                 to = 'Server'
+            else:
+                to = self.chatTabs.tabText(self.chatTabs.currentIndex())
             prot.send(prot.client_socket,Name = prot.uName,msg = self.msg.text(),To = to)
             self.Room_update(color = 'dark violet', text = f'ME :> {self.msg.text()}',index = self.chatTabs.currentIndex())
             self.msg.clear()
@@ -128,13 +142,16 @@ class chatWin(QMainWindow):
             pass
 
     def received(self,msg):
+        print(msg)
         if msg['Name'] == 'Server':
-            self.emitSignal('brown',f"Server :> {msg['msg']}",False,0)
+            if 'created' in msg['msg'] or 'joined' in msg['msg']:
+                self.emitSignal(text = msg['msg'],status = 1)
+            self.emitSignal('brown',f"Server :> {msg['msg']}",0,0)
             return
         for i in range(1,self.chatTabs.count()):
-            if self.chatTabs.tabText(i) == msg['Room']:
+            if self.chatTabs.tabText(i) == msg['To']:
                 break
-        self.emitSignal('brown',msg,False,i)
+        self.emitSignal('brown',f"{msg['Name']} :> {msg['msg']}",False,i)
 
 if __name__ == '__main__':
 

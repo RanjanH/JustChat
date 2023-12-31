@@ -73,7 +73,14 @@ class ServerProtocol:
             self.sendMsg(sock,f"Room {rName} already exists. Why don't you try joining it?")
             return
         self.rooms[rName] = []
-        self.rooms[rName].append(self.getName(sock))
+        self.rooms[rName].append(sock)
+        self.sendMsg(sock,f"Room {rName} is created.")
+        self.window.textEdit_update(color = 'brown',text = f'New room {rName} created by {self.getName(sock)}')
+
+    def join(self,sock,rName):
+        self.rooms[rName].append(sock)
+        self.sendMsg(sock,f"Room {rName} joined!")
+        self.window.textEdit_update(color = 'brown',text = f'Room {rName} joined by {self.getName(sock)}')
     
     def startServer(self):
         self.window.start.setEnabled(False)
@@ -117,6 +124,11 @@ class ServerProtocol:
                     self.outputs.append(client)
 
                     self.sendMsg(client,f'Welcome to The server {cName}!')
+                    self.sendMsg(client,"Following are some commands which you can use in the server room :-")
+                    self.sendMsg(client," --- /create <room name> :> Create a new room, The room name should have no spaces.")
+                    self.sendMsg(client," --- /join <room name> :> Join a room.")
+                    self.sendMsg(client," --- /leave <room name> :> Leave a room.")
+
                     if len(self.rooms) > 0:
                         self.sendMsg(client,f'Following are the list of active rooms that you can join :-')
                         for i in self.rooms.keys():
@@ -124,13 +136,9 @@ class ServerProtocol:
                     else:
                         self.sendMsg(client,"Currently there are no rooms why don't you be the first to create a room")
 
-                    self.sendMsg(client,"Following are some commands which you can use in the server room :-")
-                    self.sendMsg(client," --- /create <room name> :> Create a new room")
-                    self.sendMsg(client," --- /join <room name> :> Join a room")
-                    self.sendMsg(client," --- /leave <room name> :> Leave a room")
-
                 else:
                     message = self.recv(sock)
+                    print(message)
 
                     if message is False:
                         self.outputs.remove(sock)
@@ -158,12 +166,20 @@ class ServerProtocol:
                             self.createRoom(sock,rName)
                         elif len(self.rooms) == 0 and (cmd == '/leave' or cmd == '/join'):
                             self.sendMsg(sock,f'No such Room found for you to {rName}')
+                        elif cmd == '/join':
+                            self.join(sock,rName)
                         else:
                             if cmd == '/leave':
                                 try:
                                     self.rooms[rName].remove(self.clientMap[sock]['Name'])
                                 except:
                                     self.sendmsg(sock,f'You have not joined room {rName}')
+                    else:
+                        for i in self.rooms.keys():
+                            if i == message['To']:
+                                for j in self.rooms[i]:
+                                    if j != sock:
+                                        self.send(j,Name = message['Name'],msg = message['msg'],To = message['To'])
 
             for sock in error:
                 if sock in self.socket_list: self.socket_list.remove(sock)

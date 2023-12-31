@@ -42,23 +42,22 @@ class ClientProtocol:
             size = socket.ntohl(struct.unpack("L",size)[0])
         except struct.error as e:
             return ''
-        '''except :
-            return False'''
         
         buffer = ''
         while len(buffer) < size:
             buffer = sock.recv(size - len(buffer))
         buffer = unmarshall(buffer)
+        print(buffer)
         return buffer
 
     def connect(self):
         sleep(0.5)
-        self.window.emitSignal(color = 'blue', text = 'Connecting....',newOnline = False,index = 0)
+        self.window.emitSignal(color = 'blue', text = 'Connecting....',status = 0,index = 0)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.client_socket.connect((self.IP, self.PORT))
         except:
-            self.window.emitSignal(color = "red", text = "Failed to connect to server",newOnline = False,index = 0)
+            self.window.emitSignal(color = "red", text = "Failed to connect to server",status = 0,index = 0)
             return
         
         self.connected = True
@@ -66,7 +65,7 @@ class ClientProtocol:
 
         self.send(self.client_socket,Name = self.uName)
 
-        self.window.emitSignal(color = 'green',text = 'Connected to Server!!',newOnline = False,index = 0)
+        self.window.emitSignal(color = 'green',text = 'Connected to Server!!',status = 0,index = 0)
 
         self.handler()
 
