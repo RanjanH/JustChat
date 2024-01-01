@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import *
 
 from clientProtocol import ClientProtocol
 from threading import Thread
+from time import sleep
 
 
 prot = ClientProtocol()
@@ -66,12 +67,15 @@ class chatWin(QMainWindow):
 
         self.setWindowTitle(f"{prot.uName} Just Chat!")
 
+        self.rooms = {}
+
         self.move(589,269)
         self.setFixedSize(740,515)
         
         self.online = QTableWidget(self)
         self.online.setGeometry(1,0,150,509)
-        self.online.setRowCount(1)
+        self.rowLimit = 1
+        self.online.setRowCount(self.rowLimit)
         self.online.setColumnCount(1)
         self.online.setHorizontalHeaderLabels(['Online Now'])
         self.online.setItem(0,0,QTableWidgetItem(f"{prot.uName} (You)"))
@@ -96,13 +100,49 @@ class chatWin(QMainWindow):
         listen = Thread(target = prot.connect)
         listen.start()
 
+        checkTab = Thread(target = self.tabCheck)
+        checkTab.start()
+
         self.chatUpdate.connect(self.Room_update)
         self.newRoom.connect(self.createRoom)
+        self.userUpdate.connect(self.tableUpdate)
+
+    def tabCheck(self):
+        sleep(1)
+        cur = 0
+        while True:
+            newCur = self.chatTabs.currentIndex()
+            if newCur != cur:
+                cur = newCur
+                rName = self.chatTabs.tabText(cur)
+                self.userUpdate.emit(rName)
+        
+    def tableUpdate(self,rName):
+        if self.online.rowCount() > 1:
+            for i in range(1,self.online.rowCount()):
+                self.online.removeRow(i)
+        if self.chatTabs.tabText(self.chatTabs.currentIndex()) == rName:
+            if rName == 'Server Room':
+                self.rowLimit = 1
+                self.online.setRowCount(self.rowLimit)
+                for i in range(1,self.online.rowCount()):
+                    self.online.removeRow(i)
+            elif len(self.rooms[rName]) != 0:
+                print(len(self.rooms[rName]),self.rooms[rName])
+                self.rowLimit = len(self.rooms[rName]) + 1
+                print(self.rowLimit)
+                self.online.setRowCount(self.rowLimit)
+                pos = 0
+                for j in self.rooms[rName]:
+                    pos += 1
+                    self.online.setItem(pos,0,QTableWidgetItem(j))
 
     def tabClose(self,index):
         if index == 0:
             return
+        rname = self.chatTabs.tabText(index)
         self.chatTabs.removeTab(index)
+        prot.send(prot.client_socket,Name = prot.uName,msg = f"/leave {rname}",To = 'Server')
 
     def createRoom(self,name):
         tab = QTextEdit(self)
@@ -110,6 +150,7 @@ class chatWin(QMainWindow):
         self.chatTabs.addTab(tab,name)
         idx = self.chatTabs.count() - 1
         self.Room_update("green",f"Server :> Welcome to the room {name}",idx)
+        self.rooms[name] = []
 
 
     def keyPressEvent(self, e: QKeyEvent | None):
@@ -142,11 +183,34 @@ class chatWin(QMainWindow):
             pass
 
     def received(self,msg):
-        print(msg)
         if msg['Name'] == 'Server':
-            if 'created' in msg['msg'] or 'joined' in msg['msg']:
+            text = msg['msg']
+            if 'created' in msg['msg'] or 'joined!' in msg['msg']:
                 self.emitSignal(text = msg['msg'],status = 1)
-            self.emitSignal('brown',f"Server :> {msg['msg']}",0,0)
+            elif 'left' in msg['msg']:
+                rname = ((msg['msg'].split('room'))[1]).strip()
+                if 'You left' in msg['msg']:
+                    try:                        
+                        for i in range(self.chatTabs.count()):
+                            if self.chatTabs.tabText(i) == rname:
+                                self.chatTabs.removeTab(i)
+                                break
+                    except:
+                        pass
+                else:
+                    self.rooms[rname].remove((msg['msg'].split('left'))[0].strip())
+                    print((msg['msg'].split('left'))[0].strip(),'left')
+                    self.userUpdate.emit(rname)
+            elif "Online:" in msg['msg']:
+                on = text.split('Online:')[1]
+                try:
+                    on = on.split()
+                    for i in on:
+                        self.rooms[msg['To']].append(i)
+                except:
+                    self.rooms[msg['To']].append(on)
+                self.userUpdate.emit(msg['To'])
+            self.emitSignal('brown',f"Server :> {text}",0,0)
             return
         for i in range(1,self.chatTabs.count()):
             if self.chatTabs.tabText(i) == msg['To']:

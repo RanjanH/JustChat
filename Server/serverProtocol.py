@@ -81,6 +81,13 @@ class ServerProtocol:
         self.rooms[rName].append(sock)
         self.sendMsg(sock,f"Room {rName} joined!")
         self.window.textEdit_update(color = 'brown',text = f'Room {rName} joined by {self.getName(sock)}')
+        online = ''
+        for i in self.rooms[rName]:
+            if i != sock:
+                self.send(i,Name = 'Server',msg = f"Online:{self.getName(sock)}",To = rName)
+                online += self.getName(i) + ' '
+        self.send(sock, Name = 'Server', msg = "Online:" + online, To = rName)
+        
     
     def startServer(self):
         self.window.start.setEnabled(False)
@@ -171,9 +178,12 @@ class ServerProtocol:
                         else:
                             if cmd == '/leave':
                                 try:
-                                    self.rooms[rName].remove(self.clientMap[sock]['Name'])
+                                    self.rooms[rName].remove(sock)
+                                    self.sendMsg(sock,f'You left room {rName}')
+                                    for i in self.rooms[rName]:
+                                        self.send(i,Name = 'Server',msg = f'{self.getName(sock)} left the room {rName}',To = rName)
                                 except:
-                                    self.sendmsg(sock,f'You have not joined room {rName}')
+                                    self.sendMsg(sock,f'You have not joined room {rName}')
                     else:
                         for i in self.rooms.keys():
                             if i == message['To']:
