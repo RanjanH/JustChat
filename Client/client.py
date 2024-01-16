@@ -78,6 +78,7 @@ class chatWin(QMainWindow):
         self.online.setRowCount(self.rowLimit)
         self.online.setColumnCount(1)
         self.online.setHorizontalHeaderLabels(['Online Now'])
+        self.online.verticalHeader().hide()
         self.online.setItem(0,0,QTableWidgetItem(f"{prot.uName} (You)"))
 
         self.chatTabs = QTabWidget(self)
